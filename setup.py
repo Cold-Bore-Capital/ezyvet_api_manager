@@ -1,6 +1,6 @@
 from setuptools import setup
 
 setup(
-    name='cbcdb',
-    packages=['cbcdb']
+    name='ezyvetapi',
+    packages=['ezyvetapi']
 )
