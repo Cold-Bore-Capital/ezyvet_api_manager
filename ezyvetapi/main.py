@@ -3,6 +3,7 @@ import time
 from datetime import timedelta
 from typing import Dict, Any, Union, Callable
 
+import pandas as pd
 import requests
 from cbcdb import DBManager
 
@@ -23,23 +24,27 @@ class EzyVetApi:
 
     def get_api(self,
                 location_id: int,
-                endpoint: str,
+                endpoint_name: str,
+                endpoint_ver: str,
                 params: dict = None,
                 headers: dict = None):
         """
         Main function to get api data
         Args:
             location_id: Location ID to operate on.
-            endpoint: endpoint to query
+            endpoint_name: endpoint to query
+            endpoint_ver: version of the endpoint to use.
             headers: headers to dict format
             params: params to dict format
 
         Returns:
             A list of dicts containing the data
         """
+        endpoint = f'{endpoint_ver}/{endpoint_name}'
         db = DBManager()
         params = self._build_params(params)
-        api_credentials = self._get_api_credentials(location_id, self._config.ezy_vet_api, 10, db, self.get_access_token)
+        api_credentials = self._get_api_credentials(location_id, self._config.ezy_vet_api, 10, db,
+                                                    self.get_access_token)
         headers = self._set_headers(api_credentials, headers)
         api_url = self._config.ezy_vet_api
         output = self._get_data_from_api(api_url=api_url,
@@ -81,6 +86,45 @@ class EzyVetApi:
         data = res.json()
         access_token = data['access_token']
         return access_token
+
+    def get_endpoint_df(self, location_id: int, endpoint_name: str, endpoint_ver: str, params=None):
+        """
+        Returns the results of an API query as a dataframe.
+
+        Args:
+            location_id: Location ID to query
+            endpoint_name: Name of endpoint. I.E. appointments.
+            endpoint_ver: End point version in format `v2`
+            params:
+
+        Returns:
+
+        """
+        res = self.get_api(location_id=location_id,
+                           endpoint_name=endpoint_name,
+                           endpoint_ver=endpoint_ver,
+                           params=params)
+        if not res:
+            return False
+
+        df = pd.DataFrame(res)
+        return df
+
+    def get_translation(self, endpoint_ver: str, endpoint_name: str) -> dict:
+        """
+        Returns a translation dictionary to convert an id number into a string value
+
+        Args:
+            endpoint_ver: version of the endpoint, v1 or v2
+            endpoint_name: Name of the endpoint ex. animals
+
+        Returns:
+            Returns a dictionary in the format {1:'translation_name'}
+        """
+        df = self.get_endpoint_df(endpoint_name, endpoint_ver)
+        # df.to_dict(orient='split')
+        translation = {int(x['id']): x['name'] for x in df.to_dict(orient='records')}
+        return translation
 
     '''
     # Section - Private Methods
