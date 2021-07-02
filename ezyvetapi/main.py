@@ -208,7 +208,7 @@ class EzyVetApi:
                            params: Dict[str, Union[str, str]],
                            headers: Dict[str, str],
                            endpoint: str,
-                           call_api: callable) -> Union[bool, list]:
+                           call_api: Callable[[str, dict, dict], dict]) -> Union[bool, list]:
         """
         Retrieves data from the EzyVet API.
 
@@ -220,12 +220,13 @@ class EzyVetApi:
             params: Query parameters
             headers: Headers for EzyVet authentication.
             endpoint: The name of the endpoint in the format v1/name. Example, v2/appointment.
+            call_api: Instance of _call_api method
 
         Returns:
             A dictionary containing the requested data.
         """
         url = f'{api_url}{endpoint}'
-        data = call_api(headers, params, url)
+        data = call_api(url, headers, params)
 
         if 'items_total' in data['meta']:
             record_count = data['meta']['items_total']
