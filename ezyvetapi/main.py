@@ -22,12 +22,7 @@ class EzyVetApi:
     # Section - Public Methods
     '''
 
-    def get_api(self,
-                location_id: int,
-                endpoint_name: str,
-                endpoint_ver: str,
-                params: dict = None,
-                headers: dict = None):
+    def get(self, location_id: int, endpoint_ver: str, endpoint_name: str, params: dict = None, headers: dict = None):
         """
         Main function to get api data
         Args:
@@ -87,7 +82,7 @@ class EzyVetApi:
         access_token = data['access_token']
         return access_token
 
-    def get_endpoint_df(self, location_id: int, endpoint_name: str, endpoint_ver: str, params=None):
+    def get_endpoint_df(self, location_id: int, endpoint_ver: str, endpoint_name: str, params=None) -> pd.DataFrame:
         """
         Returns the results of an API query as a dataframe.
 
@@ -95,33 +90,34 @@ class EzyVetApi:
             location_id: Location ID to query
             endpoint_name: Name of endpoint. I.E. appointments.
             endpoint_ver: End point version in format `v2`
-            params:
+            params: Optional set of parameter filters for the query.
 
         Returns:
 
         """
-        res = self.get_api(location_id=location_id,
-                           endpoint_name=endpoint_name,
-                           endpoint_ver=endpoint_ver,
-                           params=params)
+        res = self.get(location_id=location_id,
+                       endpoint_ver=endpoint_ver,
+                       endpoint_name=endpoint_name,
+                       params=params)
         if not res:
             return False
 
         df = pd.DataFrame(res)
         return df
 
-    def get_translation(self, endpoint_ver: str, endpoint_name: str) -> dict:
+    def get_translation(self, location_id: int, endpoint_ver: str, endpoint_name: str) -> dict:
         """
         Returns a translation dictionary to convert an id number into a string value
 
         Args:
+            location_id: Location ID to query.
             endpoint_ver: version of the endpoint, v1 or v2
             endpoint_name: Name of the endpoint ex. animals
 
         Returns:
             Returns a dictionary in the format {1:'translation_name'}
         """
-        df = self.get_endpoint_df(endpoint_name, endpoint_ver)
+        df = self.get_endpoint_df(location_id, endpoint_ver, endpoint_name)
         # df.to_dict(orient='split')
         translation = {int(x['id']): x['name'] for x in df.to_dict(orient='records')}
         return translation
@@ -212,7 +208,7 @@ class EzyVetApi:
                            params: Dict[str, Union[str, str]],
                            headers: Dict[str, str],
                            endpoint: str,
-                           call_api: callable) -> Union[bool, Dict[str, Union[str, int]]]:
+                           call_api: callable) -> Union[bool, list]:
         """
         Retrieves data from the EzyVet API.
 
@@ -245,7 +241,8 @@ class EzyVetApi:
             print('No results returned')
             return False
         if pages > 1:
-            # Get the next page of data. EzyVet will only return 10 records per page so a pagination call needs to be made.
+            # Get the next page of data. EzyVet will only return 10 records per page so a pagination call needs to be
+            # made.
             for page_num in range(2, pages + 1):
                 # Add a "page" variable to the params
                 params['page'] = page_num
@@ -254,6 +251,7 @@ class EzyVetApi:
                 print(f'Page {page_num} has {page_item_count} records.')
                 output += data['items']
         output = [x[endpoint.split('/')[1]] for x in output]
+
         return output
 
     def _call_api(self, url: str, headers: dict, params: dict) -> dict:
@@ -288,4 +286,4 @@ class EzyVetAPIError(requests.exceptions.HTTPError):
 
 if __name__ == '__main__':
     e = EzyVetApi()
-    e.get_api(2, 'v2/appointment', None, None, None)
+    e.get(2, None, 'v2/appointment', None, None)

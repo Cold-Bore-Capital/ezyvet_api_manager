@@ -1,6 +1,8 @@
 from datetime import datetime
 from unittest import TestCase
 
+import pandas as pd
+
 from ezyvetapi.main import EzyVetApi
 
 
@@ -34,7 +36,51 @@ class TestEzyVetApi(TestCase):
         self.assertEqual(golden, test)
 
     def test__get_endpoint_df(self):
-        pass
+        e = MockEzyVetAPI()
+
+        data = [{'id': 1, 'active': 1, 'testme': 'string value'}, {'id': 2, 'active': 1, 'testme': 'string value'},
+                {'id': 3, 'active': 0, 'testme': 'string value'}, {'id': 4, 'active': 1, 'testme': 'string value'},
+                {'id': 4, 'active': 1, 'testme': 'string value'}, {'id': 1, 'active': 1, 'testme': 'string value'},
+                {'id': 2, 'active': 1, 'testme': 'string value'}, {'id': 3, 'active': 0, 'testme': 'string value'},
+                {'id': 4, 'active': 1, 'testme': 'string value'}, {'id': 4, 'active': 1, 'testme': 'string value'}]
+        e.get_api_mock_return_value = data
+
+        res = e.get_endpoint_df(2, 'v2', 'testing')
+
+        self.assertTrue(isinstance(res, pd.DataFrame))
+
+        test = res.loc[0, 'id']
+        golden = 1
+        self.assertEqual(golden, test)
+
+        test = res.loc[8, 'testme']
+        golden = 'string value'
+        self.assertEqual(golden, test)
+
+    def test__get_translation(self):
+        e = MockEzyVetAPI()
+        data = [
+            {'id': 1, 'name': 'red'},
+            {'id': 2, 'name': 'green'},
+            {'id': 3, 'name': 'yellow'},
+            {'id': 4, 'name': 'blue'},
+            {'id': 5, 'name': 'purple'},
+            {'id': 6, 'name': 'black'},
+        ]
+        e.get_api_mock_return_value = data
+        res = e.get_translation(1, 'v2', 'testme')
+
+        test = res[1]
+        golden = 'red'
+        self.assertEqual(golden, test)
+
+        test = res[5]
+        golden = 'purple'
+        self.assertEqual(golden, test)
+
+        test = len(res)
+        golden = 6
+        self.assertEqual(golden, test)
 
     def test__set_headers(self):
         e = EzyVetApi()
@@ -64,7 +110,6 @@ class TestEzyVetApi(TestCase):
         # Single page of results testing
         meta = {'items_total': 5,
                 'items_page_total': 1}
-
         items = [
             {'testing': {'id': 1, 'active': 1, 'testme': 'string value'}},
             {'testing': {'id': 2, 'active': 1, 'testme': 'string value'}},
@@ -72,10 +117,9 @@ class TestEzyVetApi(TestCase):
             {'testing': {'id': 4, 'active': 1, 'testme': 'string value'}},
             {'testing': {'id': 4, 'active': 1, 'testme': 'string value'}},
         ]
-
         data = {'meta': meta, 'items': items}
         e.get_api_mock_return_value = data
-        res = e._get_data_from_api(api_url, params, headers, endpoint, e.get_api)
+        res = e._get_data_from_api(api_url, params, headers, endpoint, e.get)
         test = res[0]['id']
         golden = 1
         self.assertEqual(golden, test)
@@ -96,7 +140,7 @@ class TestEzyVetApi(TestCase):
         ]
         data = {'meta': meta, 'items': items}
         e.get_api_mock_return_value = data
-        res = e._get_data_from_api(api_url, params, headers, endpoint, e.get_api)
+        res = e._get_data_from_api(api_url, params, headers, endpoint, e.get)
         test = res[0]['id']
         golden = 1
         self.assertEqual(golden, test)
@@ -145,10 +189,5 @@ class MockEzyVetAPI(EzyVetApi):
         self.get_api_mock_return_value = None
         super().__init__()
 
-    def get_api(self,
-                location_id: int,
-                endpoint_name: str,
-                endpoint_ver: str,
-                params: dict = None,
-                headers: dict = None):
+    def get(self, location_id: int, endpoint_ver: str, endpoint_name: str, params: dict = None, headers: dict = None):
         return self.get_api_mock_return_value
