@@ -1,5 +1,6 @@
 import json
 import time
+from datetime import datetime
 from datetime import timedelta
 from typing import Dict, Any, Union, Callable
 
@@ -22,7 +23,8 @@ class EzyVetApi:
     # Section - Public Methods
     '''
 
-    def get(self, location_id: int, endpoint_ver: str, endpoint_name: str, params: dict = None, headers: dict = None):
+    def get(self, location_id: int, endpoint_ver: str, endpoint_name: str, params: dict = None,
+            headers: dict = None) -> list:
         """
         Main function to get api data
         Args:
@@ -48,6 +50,26 @@ class EzyVetApi:
                                          endpoint=endpoint,
                                          call_api=self._call_api)
         return output
+
+    def get_date_range(self, location_id: int, endpoint_ver: str, endpoint_name: str, date_filter_field: str,
+                       start_date: datetime = None, end_date: datetime = None, days: int = None) -> list:
+        """
+        Retrieves records for a specified date range.
+
+        Args:
+            location_id: Location ID to operate on.
+            endpoint_name: endpoint to query
+            endpoint_ver: version of the endpoint to use.
+            date_filter_field: Name of the field to filter on. I.E. "modified_date"
+            start_date: Optional. Start of date range.
+            end_date: Optional. End of date range
+            days: Optional. A number of days to set the start or end date of the range.
+
+        Returns:
+            A list of dicts containing the data
+        """
+        params = self._build_date_filter(date_filter_field, start_date, end_date, days)
+        return self.get(location_id, endpoint_ver, endpoint_name, params)
 
     @staticmethod
     def get_access_token(api_url: str, api_credentials: Dict[str, Union[str, int]]) -> str:
@@ -279,6 +301,78 @@ class EzyVetApi:
                                      f'res.text: {res.text}')
         data = res.json()
         return data
+
+    @staticmethod
+    def _build_date_filter(filter_field: str, start_date: datetime = None, end_date: datetime = None,
+                           days: int = 0) -> dict:
+        """
+        Creates a date filter set returned as a dict.
+
+        End date will always be inclusive of the full day if a time is not set.
+
+        Behavior:
+        a. start_date and end_date set: If both a start_date and end_date are provided, the method will create a between
+        filter.
+
+        b. start_date, end_date = None: A filter will be created for any value greater than the start date.
+
+        c. start_date = None, end_date set: A filter will be created for any value less than the end date.
+
+        d. If either a start date, or an end date are set plus days, a date range will be created. For example, if
+           start_date is set with 5 days, a date range spanning the start date to five days in the future will be
+           created.
+
+        Args:
+            filter_field: Name of the field to filter on. I.E. "modified_date"
+            start_date: Optional. Start of date range.
+            end_date: Optional. End of date range
+            days: Optional. A number of days to set the start or end date of the range.
+
+        Returns:
+            A dictionary containing the appropriate date range.
+        """
+        # Check to make sure that at least a start or end date exists.
+        output = {filter_field: None}
+        if end_date:
+            # For end date to be inclusive, it must have a time at the end of the day.
+            # If end_date has no time information, assume full day and correct here.
+            time_test = end_date.hour + end_date.minute + end_date.second
+            if time_test == 0:
+                end_date = datetime(end_date.year, end_date.month, end_date.day, 23, 59, 59)
+
+        if start_date and not end_date:
+            start_timestamp = time.mktime(start_date.timetuple())
+            if days:
+                end_date = start_date + timedelta(days=days)
+                end_timestamp = time.mktime(end_date.timetuple())
+                return {filter_field: {'gt': start_timestamp, 'lte': end_timestamp}}
+            else:
+                return {filter_field: {'gt': start_timestamp}}
+        elif end_date and not start_date:
+            end_timestamp = time.mktime(end_date.timetuple())
+            if days:
+                start_date = end_date - timedelta(days=days)
+                start_timestamp = time.mktime(start_date.timetuple())
+                return {filter_field: {'gt': start_timestamp, 'lte': end_timestamp}}
+            else:
+                return {filter_field: {'lt': end_timestamp}}
+        elif start_date and end_date:
+            if days:
+                raise StartEndAndDaysSet('You cannot set the start date, end date, and days.')
+            else:
+                start_timestamp = time.mktime(start_date.timetuple())
+                end_timestamp = time.mktime(end_date.timetuple())
+                return {filter_field: {'gt': start_timestamp, 'lte': end_timestamp}}
+        else:
+            raise MissingStartAndEndDate("You must set either a start or end date for build_date_filter.")
+
+
+class MissingStartAndEndDate(Exception):
+    pass
+
+
+class StartEndAndDaysSet(Exception):
+    pass
 
 
 class EzyVetAPIError(requests.exceptions.HTTPError):

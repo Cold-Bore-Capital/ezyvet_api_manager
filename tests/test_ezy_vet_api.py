@@ -3,7 +3,7 @@ from unittest import TestCase
 
 import pandas as pd
 
-from ezyvetapi.main import EzyVetApi
+from ezyvetapi.main import EzyVetApi, StartEndAndDaysSet, MissingStartAndEndDate
 
 
 class TestEzyVetApi(TestCase):
@@ -152,6 +152,58 @@ class TestEzyVetApi(TestCase):
         test = len(res)
         golden = 10
         self.assertEqual(golden, test)
+
+    def test__build_date_filter(self):
+        e = EzyVetApi()
+        tests = [
+            {'id': 1, 'name': 'Start and End Date Set', 'start_date': datetime(2021, 1, 1, 5, 43, 12),
+             'end_date': datetime(2021, 1, 10, 5, 43, 12), 'days': 0,
+             'golden': {'test': {'gt': 1609504992.0, 'lte': 1610282592.0}}},
+
+            {'id': 2, 'name': 'Start date set, no days', 'start_date': datetime(2021, 1, 1, 5, 43, 12),
+             'end_date': None, 'days': 0, 'golden': {'test': {'gt': 1609504992.0}}},
+
+            {'id': 3, 'name': 'Start date set, 10 days', 'start_date': datetime(2021, 1, 1, 5, 43, 12),
+             'end_date': None, 'days': 10, 'golden': {'test': {'gt': 1609504992.0, 'lte': 1610368992.0}}},
+
+            {'id': 4, 'name': 'End date set, no start', 'start_date': None,
+             'end_date': datetime(2021, 1, 10, 5, 43, 12), 'days': 0, 'golden': {'test': {'lt': 1610282592.0}}},
+
+            {'id': 5, 'name': 'End date set, 10 days', 'start_date': None,
+             'end_date': datetime(2021, 1, 10, 5, 43, 12), 'days': 10,
+             'golden': {'test': {'gt': 1609418592.0, 'lte': 1610282592.0}}},
+            {'id': 6, 'name': 'End date with no time, no start', 'start_date': None,
+             'end_date': datetime(2021, 1, 10), 'days': 0, 'golden': {'test': {'lt': 1610348399.0}}},
+        ]
+        for t in tests:
+            test_name = t['name']
+            print(f'test__build_date_filter: Testing "{test_name}"')
+            test = e._build_date_filter(filter_field='test',
+                                        start_date=t['start_date'],
+                                        end_date=t['end_date'],
+                                        days=t['days'])
+            # datetime.fromtimestamp(timestamp)
+            self.assertDictEqual(t['golden'], test)
+
+        # Test Error Conditions. Start, end, and days set
+        start_date = datetime(2021, 1, 1, 5, 43, 12)
+        end_date = datetime(2021, 1, 10, 5, 43, 12)
+        days = 10
+        with self.assertRaises(StartEndAndDaysSet):
+            test = e._build_date_filter(filter_field='test',
+                                        start_date=start_date,
+                                        end_date=end_date,
+                                        days=days)
+
+        # Test Error Conditions. No start or end date set
+        start_date = None
+        end_date = None
+        days = 10
+        with self.assertRaises(MissingStartAndEndDate):
+            test = e._build_date_filter(filter_field='test',
+                                        start_date=start_date,
+                                        end_date=end_date,
+                                        days=days)
 
 
 class MockAPICredentialsDBManager(TestCase):

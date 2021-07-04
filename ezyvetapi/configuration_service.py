@@ -19,22 +19,6 @@ class ConfigurationService:
         self._test_mode = test_mode
 
     '''
-    Five9 Values.
-    '''
-
-    @property
-    def api_key(self):
-        return self._check_if_value_exists('API_KEY', None, True, 'A123456677')
-
-    @property
-    def client_id(self):
-        return self._check_if_value_exists('CLIENT_ID', None, True, 'ABC1234')
-
-    @property
-    def five_nine_url(self):
-        return self._check_if_value_exists('FIVE_NINE_URL', None, True, 'ABC5678')
-
-    '''
     EzyVet API
     '''
 
@@ -45,14 +29,6 @@ class ConfigurationService:
     @property
     def server_retry_sleep_time(self):
         return self._check_if_value_exists('SERVER_RETRY_SLEEP_TIME', None, False, default_value=5)
-
-    '''
-    Redshift Values.
-    '''
-
-    '''
-    Google API Values.
-    '''
 
     '''
     # End Properties
