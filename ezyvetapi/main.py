@@ -23,8 +23,13 @@ class EzyVetApi:
     # Section - Public Methods
     '''
 
-    def get(self, location_id: int, endpoint_ver: str, endpoint_name: str, params: dict = None,
-            headers: dict = None) -> list:
+    def get(self,
+            location_id: int,
+            endpoint_ver: str,
+            endpoint_name: str,
+            params: dict = None,
+            headers: dict = None,
+            dataframe_flag: bool = False) -> Union[pd.DataFrame, None, list]:
         """
         Main function to get api data
         Args:
@@ -33,9 +38,11 @@ class EzyVetApi:
             endpoint_ver: version of the endpoint to use.
             headers: headers to dict format
             params: params to dict format
+            dataframe_flag: When set to true, method will return results in a Pandas DataFrame format.
 
         Returns:
-            A list of dicts containing the data
+            If dataframe_flag is False: A list of dicts containing the data.
+            If dataframe_flag is True: A Pandas DataFrame containing the data.
         """
         endpoint = f'{endpoint_ver}/{endpoint_name}'
         db = DBManager()
@@ -49,10 +56,22 @@ class EzyVetApi:
                                          headers=headers,
                                          endpoint=endpoint,
                                          call_api=self._call_api)
+        if dataframe_flag:
+            if output:
+                df = pd.DataFrame(output)
+            else:
+                return None
         return output
 
-    def get_date_range(self, location_id: int, endpoint_ver: str, endpoint_name: str, date_filter_field: str,
-                       start_date: datetime = None, end_date: datetime = None, days: int = None) -> list:
+    def get_date_range(self,
+                       location_id: int,
+                       endpoint_ver: str,
+                       endpoint_name: str,
+                       date_filter_field: str,
+                       start_date: datetime = None,
+                       end_date: datetime = None,
+                       days: int = None,
+                       dataframe_flag: bool = False) -> list:
         """
         Retrieves records for a specified date range.
 
@@ -64,12 +83,13 @@ class EzyVetApi:
             start_date: Optional. Start of date range.
             end_date: Optional. End of date range
             days: Optional. A number of days to set the start or end date of the range.
+            dataframe_flag: When set to true, method will return results in a Pandas DataFrame format.
 
         Returns:
             A list of dicts containing the data
         """
         params = self._build_date_filter(date_filter_field, start_date, end_date, days)
-        return self.get(location_id, endpoint_ver, endpoint_name, params)
+        return self.get(location_id, endpoint_ver, endpoint_name, params, dataframe_flag=dataframe_flag)
 
     @staticmethod
     def get_access_token(api_url: str, api_credentials: Dict[str, Union[str, int]]) -> str:
@@ -103,29 +123,6 @@ class EzyVetApi:
         data = res.json()
         access_token = data['access_token']
         return access_token
-
-    def get_endpoint_df(self, location_id: int, endpoint_ver: str, endpoint_name: str, params=None) -> pd.DataFrame:
-        """
-        Returns the results of an API query as a dataframe.
-
-        Args:
-            location_id: Location ID to query
-            endpoint_name: Name of endpoint. I.E. appointments.
-            endpoint_ver: End point version in format `v2`
-            params: Optional set of parameter filters for the query.
-
-        Returns:
-
-        """
-        res = self.get(location_id=location_id,
-                       endpoint_ver=endpoint_ver,
-                       endpoint_name=endpoint_name,
-                       params=params)
-        if not res:
-            return False
-
-        df = pd.DataFrame(res)
-        return df
 
     def get_translation(self, location_id: int, endpoint_ver: str, endpoint_name: str) -> dict:
         """
