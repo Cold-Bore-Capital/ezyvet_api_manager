@@ -266,7 +266,7 @@ class EzyVetApi:
             for page_num in range(2, pages + 1):
                 # Add a "page" variable to the params
                 params['page'] = page_num
-                data = call_api(headers, params, url)
+                data = call_api(url, headers, params)
                 page_item_count = data['meta']['items_page_size']
                 print(f'Page {page_num} has {page_item_count} records.')
                 output += data['items']
