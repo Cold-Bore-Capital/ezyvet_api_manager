@@ -8,8 +8,42 @@ from ezyvetapi.main import EzyVetApi, StartEndAndDaysSet, MissingStartAndEndDate
 
 class TestEzyVetApi(TestCase):
 
+    def test__get(self):
+        e = MockEzyVetAPI_test_get()
+        e._db = MockDBManager_test_get()
+        data = [{'id': 1, 'active': 1, 'testme': 'string value'}, {'id': 2, 'active': 1, 'testme': 'string value'},
+                {'id': 3, 'active': 0, 'testme': 'string value'}, {'id': 4, 'active': 1, 'testme': 'string value'},
+                {'id': 4, 'active': 1, 'testme': 'string value'}, {'id': 1, 'active': 1, 'testme': 'string value'},
+                {'id': 2, 'active': 1, 'testme': 'string value'}, {'id': 3, 'active': 0, 'testme': 'string value'},
+                {'id': 4, 'active': 1, 'testme': 'string value'}, {'id': 4, 'active': 1, 'testme': 'string value'}]
+        e.get_api_mock_return_value = data
+
+        res = e.get(2, 'v2', 'testing', dataframe_flag=True)
+
+        self.assertTrue(isinstance(res, pd.DataFrame))
+
+        test = res.loc[0, 'id']
+        golden = 1
+        self.assertEqual(golden, test)
+
+        test = res.loc[8, 'testme']
+        golden = 'string value'
+        self.assertEqual(golden, test)
+
+        res = e.get(2, 'v2', 'testing', dataframe_flag=False)
+
+        self.assertTrue(isinstance(res, list))
+
+        test = res[0]['id']
+        golden = 1
+        self.assertEqual(golden, test)
+
+        test = res[8]['testme']
+        golden = 'string value'
+        self.assertEqual(golden, test)
+
     def test__build_params(self):
-        e = EzyVetApi()
+        e = EzyVetApi(test_mode=True)
         res = e._build_params()
         test = res['limit']
         self.assertEqual(200, test)
@@ -19,8 +53,8 @@ class TestEzyVetApi(TestCase):
         self.assertEqual('abc', test)
 
     def test__get_api_credentials(self):
-        e = EzyVetApi()
-        db = MockAPICredentialsDBManager()
+        e = EzyVetApi(test_mode=True)
+        db = MockEzyVetAPI_test__get_api_credentials()
         get_access_token = lambda x, y: 'updated_cache_token'
         # Test with no timeout.
         res = e._get_api_credentials(3, 'https://test', 10, db, get_access_token)
@@ -35,30 +69,8 @@ class TestEzyVetApi(TestCase):
         golden = 'updated_cache_token'
         self.assertEqual(golden, test)
 
-    def test__get_endpoint_df(self):
-        e = MockEzyVetAPI()
-
-        data = [{'id': 1, 'active': 1, 'testme': 'string value'}, {'id': 2, 'active': 1, 'testme': 'string value'},
-                {'id': 3, 'active': 0, 'testme': 'string value'}, {'id': 4, 'active': 1, 'testme': 'string value'},
-                {'id': 4, 'active': 1, 'testme': 'string value'}, {'id': 1, 'active': 1, 'testme': 'string value'},
-                {'id': 2, 'active': 1, 'testme': 'string value'}, {'id': 3, 'active': 0, 'testme': 'string value'},
-                {'id': 4, 'active': 1, 'testme': 'string value'}, {'id': 4, 'active': 1, 'testme': 'string value'}]
-        e.get_api_mock_return_value = data
-
-        res = e.get_endpoint_df(2, 'v2', 'testing')
-
-        self.assertTrue(isinstance(res, pd.DataFrame))
-
-        test = res.loc[0, 'id']
-        golden = 1
-        self.assertEqual(golden, test)
-
-        test = res.loc[8, 'testme']
-        golden = 'string value'
-        self.assertEqual(golden, test)
-
     def test__get_translation(self):
-        e = MockEzyVetAPI()
+        e = MockEzyVetAPI_test_get()
         data = [
             {'id': 1, 'name': 'red'},
             {'id': 2, 'name': 'green'},
@@ -83,7 +95,7 @@ class TestEzyVetApi(TestCase):
         self.assertEqual(golden, test)
 
     def test__set_headers(self):
-        e = EzyVetApi()
+        e = EzyVetApi(test_mode=True)
         api_credentials = {'access_token': 'abc123'}
         # Test with no additional headers.
         res = e._set_headers(api_credentials)
@@ -102,7 +114,7 @@ class TestEzyVetApi(TestCase):
         self.assertEqual(golden, test)
 
     def test__get_data_from_api(self):
-        e = MockEzyVetAPI()
+        e = MockEzyVetAPI_test_get_data_from_api()
         api_url = 'https://testme.test'
         params = {'and_integer': 2, 'a_list': ['hi', 'there'], 'a_dict': {'key', 'value'}}
         headers = {'Authorization': 'Bearer abc123'}
@@ -119,7 +131,7 @@ class TestEzyVetApi(TestCase):
         ]
         data = {'meta': meta, 'items': items}
         e.get_api_mock_return_value = data
-        res = e._get_data_from_api(api_url, params, headers, endpoint, e.get)
+        res = e._get_data_from_api(api_url, params, headers, endpoint, e._call_api)
         test = res[0]['id']
         golden = 1
         self.assertEqual(golden, test)
@@ -140,7 +152,7 @@ class TestEzyVetApi(TestCase):
         ]
         data = {'meta': meta, 'items': items}
         e.get_api_mock_return_value = data
-        res = e._get_data_from_api(api_url, params, headers, endpoint, e.get)
+        res = e._get_data_from_api(api_url, params, headers, endpoint, e._call_api)
         test = res[0]['id']
         golden = 1
         self.assertEqual(golden, test)
@@ -154,7 +166,7 @@ class TestEzyVetApi(TestCase):
         self.assertEqual(golden, test)
 
     def test__build_date_filter(self):
-        e = EzyVetApi()
+        e = EzyVetApi(test_mode=True)
         tests = [
             {'id': 1, 'name': 'Start and End Date Set', 'start_date': datetime(2021, 1, 1, 5, 43, 12),
              'end_date': datetime(2021, 1, 10, 5, 43, 12), 'days': 0,
@@ -206,7 +218,7 @@ class TestEzyVetApi(TestCase):
                                         days=days)
 
 
-class MockAPICredentialsDBManager(TestCase):
+class MockEzyVetAPI_test__get_api_credentials(TestCase):
 
     def __init__(self):
         # This is set so the time can be modified to test the access_token expire timeout.
@@ -231,7 +243,7 @@ class MockAPICredentialsDBManager(TestCase):
         self.assertEqual(golden, test)
 
 
-class MockEzyVetAPI(EzyVetApi):
+class MockEzyVetAPI_test_get(EzyVetApi):
     """
     A mockup class of the EzyVet API to allow for certain method overrides.
 
@@ -239,7 +251,50 @@ class MockEzyVetAPI(EzyVetApi):
 
     def __init__(self):
         self.get_api_mock_return_value = None
-        super().__init__()
+        super().__init__(test_mode=True)
 
-    def get(self, location_id: int, endpoint_ver: str, endpoint_name: str, params: dict = None, headers: dict = None):
+    def _get_data_from_api(self,
+                           api_url: str,
+                           params: dict,
+                           headers: dict,
+                           endpoint: str,
+                           call_api: callable) -> list:
+        return self.get_api_mock_return_value
+
+    @staticmethod
+    def _get_api_credentials(location_id,
+                             api_url,
+                             cache_limit,
+                             db,
+                             get_access_token):
+        return {'system_time': datetime(2021, 1, 1, 9, 15, 4),
+                 'access_token': 'test_access_token',
+                 'access_token_create_time': datetime(2021, 1, 1, 9, 15, 4)
+                 }
+
+
+class MockDBManager_test_get(EzyVetApi):
+
+    def __init__(self):
+        self.db_schema = 'test'
+        super().__init__(test_mode=True)
+
+    # def get_sql_list_dicts(self, sql, params):
+    #     return [{'system_time': datetime(2021, 1, 1, 9, 15, 4),
+    #              'access_token': 'test_access_token',
+    #              'access_token_create_time': datetime(2021, 1, 1, 9, 15, 4)
+    #              }]
+
+
+class MockEzyVetAPI_test_get_data_from_api(EzyVetApi):
+    """
+    A mockup class of the EzyVet API to allow for certain method overrides.
+
+    """
+
+    def __init__(self):
+        self.get_api_mock_return_value = None
+        super().__init__(test_mode=True)
+
+    def _call_api(self, url: str, headers: dict, params: dict) -> dict:
         return self.get_api_mock_return_value

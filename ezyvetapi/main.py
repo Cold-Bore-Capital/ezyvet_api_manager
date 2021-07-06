@@ -16,8 +16,10 @@ class EzyVetApi:
     Queries the EzyVet API.
     """
 
-    def __init__(self):
-        self._config = ConfigurationService()
+    def __init__(self, test_mode=False):
+        self._config = ConfigurationService(test_mode)
+        # In test mode the self._db value will be set externally by the unit test.
+        self._db = DBManager() if not test_mode else None
 
     '''
     # Section - Public Methods
@@ -45,7 +47,7 @@ class EzyVetApi:
             If dataframe_flag is True: A Pandas DataFrame containing the data.
         """
         endpoint = f'{endpoint_ver}/{endpoint_name}'
-        db = DBManager()
+        db = self._db
         params = self._build_params(params)
         api_credentials = self._get_api_credentials(location_id, self._config.ezy_vet_api, 10, db,
                                                     self.get_access_token)
@@ -58,7 +60,7 @@ class EzyVetApi:
                                          call_api=self._call_api)
         if dataframe_flag:
             if output:
-                df = pd.DataFrame(output)
+                return pd.DataFrame(output)
             else:
                 return None
         return output
@@ -136,7 +138,7 @@ class EzyVetApi:
         Returns:
             Returns a dictionary in the format {1:'translation_name'}
         """
-        df = self.get_endpoint_df(location_id, endpoint_ver, endpoint_name)
+        df = self.get(location_id, endpoint_ver, endpoint_name, dataframe_flag=True)
         # df.to_dict(orient='split')
         translation = {int(x['id']): x['name'] for x in df.to_dict(orient='records')}
         return translation
@@ -224,7 +226,7 @@ class EzyVetApi:
 
     @staticmethod
     def _get_data_from_api(api_url: str,
-                           params: Dict[str, Union[str, str]],
+                           params: Dict[str, Any],
                            headers: Dict[str, str],
                            endpoint: str,
                            call_api: Callable[[str, dict, dict], dict]) -> Union[bool, list]:
