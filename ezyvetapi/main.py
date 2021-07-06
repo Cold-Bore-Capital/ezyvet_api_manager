@@ -73,7 +73,7 @@ class EzyVetApi:
                        start_date: datetime = None,
                        end_date: datetime = None,
                        days: int = None,
-                       dataframe_flag: bool = False) -> list:
+                       dataframe_flag: bool = False) -> Union[None, list, pd.DataFrame]:
         """
         Retrieves records for a specified date range.
 
@@ -88,7 +88,8 @@ class EzyVetApi:
             dataframe_flag: When set to true, method will return results in a Pandas DataFrame format.
 
         Returns:
-            A list of dicts containing the data
+            dataframe_flag = False: A list of dicts containing the data.
+            dataframe_flag = True: A DataFrame containing the data.
         """
         params = self._build_date_filter(date_filter_field, start_date, end_date, days)
         return self.get(location_id, endpoint_ver, endpoint_name, params, dataframe_flag=dataframe_flag)
