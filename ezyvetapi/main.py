@@ -70,6 +70,7 @@ class EzyVetApi:
                        endpoint_ver: str,
                        endpoint_name: str,
                        date_filter_field: str,
+                       params: dict = None,
                        start_date: datetime = None,
                        end_date: datetime = None,
                        days: int = None,
@@ -82,6 +83,7 @@ class EzyVetApi:
             endpoint_name: endpoint to query
             endpoint_ver: version of the endpoint to use.
             date_filter_field: Name of the field to filter on. I.E. "modified_date"
+            params: Optional parameters to include in filter.
             start_date: Optional. Start of date range.
             end_date: Optional. End of date range
             days: Optional. A number of days to set the start or end date of the range.
@@ -91,7 +93,11 @@ class EzyVetApi:
             dataframe_flag = False: A list of dicts containing the data.
             dataframe_flag = True: A DataFrame containing the data.
         """
-        params = self._build_date_filter(date_filter_field, start_date, end_date, days)
+        date_filter_params = self._build_date_filter(date_filter_field, start_date, end_date, days)
+        if isinstance(params, dict):
+            params.update(date_filter_params)
+        else:
+            params = date_filter_params
         return self.get(location_id, endpoint_ver, endpoint_name, params, dataframe_flag=dataframe_flag)
 
     @staticmethod
