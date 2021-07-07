@@ -42,6 +42,50 @@ class TestEzyVetApi(TestCase):
         golden = 'string value'
         self.assertEqual(golden, test)
 
+    def test__get_by_ids(self):
+        e = MockEzyVetAPI_test_get_by_id()
+        data = [{'id': 1, 'active': 1, 'testme': 'string value'}, {'id': 2, 'active': 1, 'testme': 'string value'},
+                {'id': 3, 'active': 0, 'testme': 'string value'}, {'id': 4, 'active': 1, 'testme': 'string value'},
+                {'id': 4, 'active': 1, 'testme': 'string value'}, {'id': 1, 'active': 1, 'testme': 'string value'},
+                {'id': 2, 'active': 1, 'testme': 'string value'}, {'id': 3, 'active': 0, 'testme': 'string value'},
+                {'id': 4, 'active': 1, 'testme': 'string value'}, {'id': 4, 'active': 1, 'testme': 'string value'}]
+        df_data = pd.DataFrame(data)
+        e.get_api_mock_return_value = df_data
+        e.golden = {'id': {'in': [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]}}
+        ids = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
+        res = e.get_by_id(2, 'v2', 'testing', ids, dataframe_flag=True)
+        self.assertTrue(isinstance(res, pd.DataFrame))
+        test = res.loc[0, 'id']
+        golden = 1
+        self.assertEqual(golden, test)
+        test = res.loc[8, 'testme']
+        golden = 'string value'
+        self.assertEqual(golden, test)
+
+        e.golden = {'something': 'else', 'id': {'in': [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]}}
+        ids = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
+        params = {'something': 'else'}
+        res = e.get_by_id(2, 'v2', 'testing', ids, params=params, dataframe_flag=True)
+
+        e.golden = {'something': 'else', 'id': {'in': [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]}}
+        ids = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
+        params = {'something': 'else'}
+        res = e.get_by_id(2, 'v2', 'testing', ids, params=params, dataframe_flag=False)
+        self.assertTrue(isinstance(res, list))
+
+        # Check just a single ID
+        data = [{'id': 1, 'active': 1, 'testme': 'string value'}, {'id': 2, 'active': 1, 'testme': 'string value'}]
+        df_data = pd.DataFrame(data)
+        e.get_api_mock_return_value = df_data
+        e.golden = {'something': 'else', 'id': {'in': [1]}}
+        ids = 1
+        params = {'something': 'else'}
+        res = e.get_by_id(2, 'v2', 'testing', ids, params=params, dataframe_flag=False)
+        self.assertTrue(isinstance(res, list))
+        test = res[0]['id']
+        golden = 1
+        self.assertEqual(golden, test)
+
     def test__build_params(self):
         e = EzyVetApi(test_mode=True)
         res = e._build_params()
@@ -268,9 +312,9 @@ class MockEzyVetAPI_test_get(EzyVetApi):
                              db,
                              get_access_token):
         return {'system_time': datetime(2021, 1, 1, 9, 15, 4),
-                 'access_token': 'test_access_token',
-                 'access_token_create_time': datetime(2021, 1, 1, 9, 15, 4)
-                 }
+                'access_token': 'test_access_token',
+                'access_token_create_time': datetime(2021, 1, 1, 9, 15, 4)
+                }
 
 
 class MockDBManager_test_get(EzyVetApi):
@@ -297,4 +341,25 @@ class MockEzyVetAPI_test_get_data_from_api(EzyVetApi):
         super().__init__(test_mode=True)
 
     def _call_api(self, url: str, headers: dict, params: dict) -> dict:
+        return self.get_api_mock_return_value
+
+
+class MockEzyVetAPI_test_get_by_id(EzyVetApi, TestCase):
+
+    def __init__(self):
+        self.get_api_mock_return_value = None
+        self.golden = None
+        super().__init__(test_mode=True)
+
+    def get(self,
+            location_id: int,
+            endpoint_ver: str,
+            endpoint_name: str,
+            params: dict = None,
+            headers: dict = None,
+            dataframe_flag: bool = False
+            ):
+
+        self.assertDictEqual(self.golden, params)
+
         return self.get_api_mock_return_value

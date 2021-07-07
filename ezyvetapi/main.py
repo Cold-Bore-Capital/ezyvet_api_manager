@@ -2,7 +2,7 @@ import json
 import time
 from datetime import datetime
 from datetime import timedelta
-from typing import Dict, Any, Union, Callable
+from typing import Dict, Any, Union, Callable, List
 
 import pandas as pd
 import requests
@@ -70,8 +70,8 @@ class EzyVetApi:
                        endpoint_ver: str,
                        endpoint_name: str,
                        date_filter_field: str,
-                       start_date: datetime = None,
                        params: dict = None,
+                       start_date: datetime = None,
                        end_date: datetime = None,
                        days: int = None,
                        dataframe_flag: bool = False) -> Union[None, list, pd.DataFrame]:
@@ -83,9 +83,9 @@ class EzyVetApi:
             endpoint_name: endpoint to query
             endpoint_ver: version of the endpoint to use.
             date_filter_field: Name of the field to filter on. I.E. "modified_date"
-            params: Optional parameters to include in filter.
             start_date: Optional. Start of date range.
             end_date: Optional. End of date range
+            params: Optional parameters to include in filter.
             days: Optional. A number of days to set the start or end date of the range.
             dataframe_flag: When set to true, method will return results in a Pandas DataFrame format.
 
@@ -99,6 +99,46 @@ class EzyVetApi:
         else:
             params = date_filter_params
         return self.get(location_id, endpoint_ver, endpoint_name, params, dataframe_flag=dataframe_flag)
+
+    def get_by_ids(self,
+                  location_id: int,
+                  endpoint_ver: str,
+                  endpoint_name: str,
+                  ids: Union[int, List[int]],
+                  params: dict = None,
+                  dataframe_flag: bool = False) -> Union[list, pd.DataFrame]:
+        """
+        Get's records from API by ID or list of ID's.
+
+        Args:
+            location_id: Location ID to operate on.
+            endpoint_name: endpoint to query
+            endpoint_ver: version of the endpoint to use.
+            ids: Either an ID number as an int, or a list of IDs i.e. [24,56,21,67]
+            params: Optional parameters to include in filter.
+            dataframe_flag: When set to true, method will return results in a Pandas DataFrame format.
+
+        Returns:
+            dataframe_flag = False: A list of dicts containing the data.
+            dataframe_flag = True: A DataFrame containing the data.
+        """
+        df = pd.DataFrame()
+        if isinstance(ids, int):
+            ids = [ids]
+        for x in range(0, len(ids), 100):
+            # This is just used for the print output.
+            end = {x + 100} if len(ids) > 100 else len(ids)
+            print(f'Getting records from {endpoint_ver}/{endpoint_name} IDs: {x}: {end} of {len(ids)}.')
+            if params:
+                params['id'] = {'in': ids[x: x + 100]}
+            else:
+                params = {'id': {'in': ids[x: x + 100]}}
+            df_batch = self.get(location_id, endpoint_ver, endpoint_name, params, dataframe_flag=True)
+            df = pd.concat([df, df_batch])
+        if dataframe_flag:
+            return df
+        else:
+            return df.to_dict('records')
 
     @staticmethod
     def get_access_token(api_url: str, api_credentials: Dict[str, Union[str, int]]) -> str:
