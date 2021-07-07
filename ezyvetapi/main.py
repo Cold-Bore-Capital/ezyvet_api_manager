@@ -101,12 +101,13 @@ class EzyVetApi:
         return self.get(location_id, endpoint_ver, endpoint_name, params, dataframe_flag=dataframe_flag)
 
     def get_by_ids(self,
-                  location_id: int,
-                  endpoint_ver: str,
-                  endpoint_name: str,
-                  ids: Union[int, List[int]],
-                  params: dict = None,
-                  dataframe_flag: bool = False) -> Union[list, pd.DataFrame]:
+                   location_id: int,
+                   endpoint_ver: str,
+                   endpoint_name: str,
+                   ids: Union[int, List[int]],
+                   id_field: str = 'id',
+                   params: dict = None,
+                   dataframe_flag: bool = False) -> Union[list, pd.DataFrame]:
         """
         Get's records from API by ID or list of ID's.
 
@@ -115,6 +116,7 @@ class EzyVetApi:
             endpoint_name: endpoint to query
             endpoint_ver: version of the endpoint to use.
             ids: Either an ID number as an int, or a list of IDs i.e. [24,56,21,67]
+            id_field: Name of the field to match on. Defaults to 'id'.
             params: Optional parameters to include in filter.
             dataframe_flag: When set to true, method will return results in a Pandas DataFrame format.
 
@@ -130,9 +132,9 @@ class EzyVetApi:
             end = {x + 100} if len(ids) > 100 else len(ids)
             print(f'Getting records from {endpoint_ver}/{endpoint_name} IDs: {x}: {end} of {len(ids)}.')
             if params:
-                params['id'] = {'in': ids[x: x + 100]}
+                params[id_field] = {'in': ids[x: x + 100]}
             else:
-                params = {'id': {'in': ids[x: x + 100]}}
+                params = {'id_field': {'in': ids[x: x + 100]}}
             df_batch = self.get(location_id, endpoint_ver, endpoint_name, params, dataframe_flag=True)
             df = pd.concat([df, df_batch])
         if dataframe_flag:
