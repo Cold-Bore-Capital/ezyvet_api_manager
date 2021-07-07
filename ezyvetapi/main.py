@@ -70,8 +70,8 @@ class EzyVetApi:
                        endpoint_ver: str,
                        endpoint_name: str,
                        date_filter_field: str,
-                       params: dict = None,
                        start_date: datetime = None,
+                       params: dict = None,
                        end_date: datetime = None,
                        days: int = None,
                        dataframe_flag: bool = False) -> Union[None, list, pd.DataFrame]:
@@ -201,6 +201,8 @@ class EzyVetApi:
         sql = f'select *, now() as system_time from {schema}.ezy_vet_credentials where location_id = %s'
         params = [location_id]
         res = db.get_sql_list_dicts(sql, params)
+        if len(res) == 0:
+            raise MissingEzyVetCredentials(f"No database record was found for location ID {location_id}")
         credentials = res[0]
         system_time = credentials['system_time'].replace(tzinfo=None)
         # Check if access_token is older than cache limit.
@@ -382,6 +384,10 @@ class StartEndAndDaysSet(Exception):
 
 
 class EzyVetAPIError(requests.exceptions.HTTPError):
+    pass
+
+
+class MissingEzyVetCredentials(Exception):
     pass
 
 
