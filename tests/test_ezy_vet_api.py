@@ -53,7 +53,7 @@ class TestEzyVetApi(TestCase):
         e.get_api_mock_return_value = df_data
         e.golden = {'id': {'in': [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]}}
         ids = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
-        res = e.get_by_id(2, 'v2', 'testing', ids, dataframe_flag=True)
+        res = e.get_by_ids(2, 'v2', 'testing', ids, dataframe_flag=True)
         self.assertTrue(isinstance(res, pd.DataFrame))
         test = res.loc[0, 'id']
         golden = 1
@@ -65,12 +65,12 @@ class TestEzyVetApi(TestCase):
         e.golden = {'something': 'else', 'id': {'in': [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]}}
         ids = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
         params = {'something': 'else'}
-        res = e.get_by_id(2, 'v2', 'testing', ids, params=params, dataframe_flag=True)
+        res = e.get_by_ids(2, 'v2', 'testing', ids, params=params, dataframe_flag=True)
 
         e.golden = {'something': 'else', 'id': {'in': [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]}}
         ids = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
         params = {'something': 'else'}
-        res = e.get_by_id(2, 'v2', 'testing', ids, params=params, dataframe_flag=False)
+        res = e.get_by_ids(2, 'v2', 'testing', ids, params=params, dataframe_flag=False)
         self.assertTrue(isinstance(res, list))
 
         # Check just a single ID
@@ -80,7 +80,7 @@ class TestEzyVetApi(TestCase):
         e.golden = {'something': 'else', 'id': {'in': [1]}}
         ids = 1
         params = {'something': 'else'}
-        res = e.get_by_id(2, 'v2', 'testing', ids, params=params, dataframe_flag=False)
+        res = e.get_by_ids(2, 'v2', 'testing', ids, params=params, dataframe_flag=False)
         self.assertTrue(isinstance(res, list))
         test = res[0]['id']
         golden = 1

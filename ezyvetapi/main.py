@@ -134,7 +134,7 @@ class EzyVetApi:
             if params:
                 params[id_field] = {'in': ids[x: x + 100]}
             else:
-                params = {'id_field': {'in': ids[x: x + 100]}}
+                params = {id_field: {'in': ids[x: x + 100]}}
             df_batch = self.get(location_id, endpoint_ver, endpoint_name, params, dataframe_flag=True)
             df = pd.concat([df, df_batch])
         if dataframe_flag:
