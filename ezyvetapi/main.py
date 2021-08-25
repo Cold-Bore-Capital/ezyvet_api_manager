@@ -49,15 +49,16 @@ class EzyVetApi:
         endpoint = f'{endpoint_ver}/{endpoint_name}'
         db = self._db
         params = self._build_params(params)
-        api_credentials = self._get_api_credentials(location_id, self._config.ezy_vet_api, 10, db,
-                                                    self.get_access_token)
+        api_credentials = self._get_api_credentials(location_id, self._config.ezy_vet_api, db, self.get_access_token,
+                                                    10)
         headers = self._set_headers(api_credentials, headers)
         api_url = self._config.ezy_vet_api
         output = self._get_data_from_api(api_url=api_url,
                                          params=params,
                                          headers=headers,
                                          endpoint=endpoint,
-                                         call_api=self._call_api)
+                                         db=db,
+                                         location_id=location_id)
         if dataframe_flag:
             if output:
                 return pd.DataFrame(output)
@@ -222,19 +223,19 @@ class EzyVetApi:
     @staticmethod
     def _get_api_credentials(location_id: int,
                              api_url: str,
-                             cache_limit: int,
                              db: DBManager,
-                             get_access_token: Callable[[str, dict], str]) -> Dict[str, Any]:
+                             get_access_token: Callable[[str, dict], str],
+                             cache_limit: int = 10) -> Dict[str, Any]:
         """
         Retrieves the API credentials for a location.
 
         Args:
             location_id: The ID to retrieve.
             api_url: Path to API.
-            cache_limit: Number of minutes before access_token expires. The system will check the current time minus
-                         the cache_limit value. If the access token is older, a new one will be requested.
             db: Instance of DBManager
             get_access_token: Instance of the _get_access_token() method.
+            cache_limit: Number of minutes before access_token expires. The system will check the current time minus
+                         the cache_limit value. If the access token is older, a new one will be requested.
 
         Returns:
             A dictionary containing the credentials.
@@ -275,12 +276,15 @@ class EzyVetApi:
             headers = {'Authorization': f'Bearer {api_credentials["access_token"]}'}
         return headers
 
-    @staticmethod
-    def _get_data_from_api(api_url: str,
+    def _get_data_from_api(self,
+                           api_url: str,
                            params: Dict[str, Any],
                            headers: Dict[str, str],
                            endpoint: str,
-                           call_api: Callable[[str, dict, dict], dict]) -> Union[bool, list]:
+                           db: DBManager,
+                           location_id: int,
+                           calls_per_minute_limit: int = 60,
+                           seconds_in_a_min: int = 60) -> Union[bool, list]:
         """
         Retrieves data from the EzyVet API.
 
@@ -292,13 +296,16 @@ class EzyVetApi:
             params: Query parameters
             headers: Headers for EzyVet authentication.
             endpoint: The name of the endpoint in the format v1/name. Example, v2/appointment.
-            call_api: Instance of _call_api method
-
+            db: Instance of DBManager
+            location_id: The ID to retrieve.
+            calls_per_minute_limit: The number of calls that can be made to the API in one minute.
+            seconds_in_a_min: The number of seconds in a minute. This gets overridden during unit tests so
+                                       that the test doesn't take too long.
         Returns:
             A dictionary containing the requested data.
         """
         url = f'{api_url}{endpoint}'
-        data = call_api(url, headers, params)
+        data = self._call_api(url, headers, params, db, location_id)
 
         if 'items_total' in data['meta']:
             record_count = data['meta']['items_total']
@@ -313,21 +320,43 @@ class EzyVetApi:
         else:
             print('No results returned')
             return False
+
         if pages > 1:
             # Get the next page of data. EzyVet will only return 10 records per page so a pagination call needs to be
             # made.
+            minute_call_counter = 1
+            start_time = datetime.now()
             for page_num in range(2, pages + 1):
+                # Rate limits call for no more than 60 calls per minute to any one endpoint (you could
+                # call two endpoints at the same time up to 120 total calls a min). This throttles the
+                # call speed to stay under the limit.
+
+                if minute_call_counter >= calls_per_minute_limit:
+                    elapsed_seconds = (datetime.now() - start_time).seconds
+                    time_remaining = elapsed_seconds - seconds_in_a_min
+                    print(f"Rate limit reached. It's been {elapsed_seconds} seconds. Sleeping for {time_remaining}s.")
+                    # Add 1 just to give a small amount of wiggle room.
+                    time.sleep(time_remaining + 1)
+                    minute_call_counter = 0
+                    start_time = datetime.now()
                 # Add a "page" variable to the params
                 params['page'] = page_num
-                data = call_api(url, headers, params)
+                data = self._call_api(url, headers, params, db, location_id)
                 page_item_count = data['meta']['items_page_size']
                 print(f'Page {page_num} has {page_item_count} records.')
                 output += data['items']
+                minute_call_counter += 1
         output = [x[endpoint.split('/')[1]] for x in output]
 
         return output
 
-    def _call_api(self, url: str, headers: dict, params: dict) -> dict:
+    def _call_api(self,
+                  url: str,
+                  headers: dict,
+                  params: dict,
+                  db: DBManager,
+                  location_id: int,
+                  fail_counter: int = 0) -> dict:
         """
         Initiates connection to API.
 
@@ -335,6 +364,9 @@ class EzyVetApi:
             url: URL with endpoint to query.
             headers: Auth headers
             params: Query parameters.
+            db: Instance of DBManager
+            location_id: The ID to retrieve.
+            fail_counter: A counter to indicate how many recursive failed calls have occurred.
 
         Returns:
             A dict containing the query results.
@@ -346,9 +378,22 @@ class EzyVetApi:
             time.sleep(sleep_time)
             res = requests.get(url, headers=headers, params=params)
             if res.status_code != 200:
-                print(res.text)
-                raise EzyVetAPIError(f'Api returned non-200 status code. res: {res.status_code} '
-                                     f'res.text: {res.text}')
+                if res.status_code != 401 and fail_counter <= 2:
+                    # Something is wrong with the token. Get a new one.
+                    print('Token expired or otherwise was invalid. Pulling new token. ')
+                    api_credentials = self._get_api_credentials(location_id,
+                                                                self._config.ezy_vet_api,
+                                                                db,
+                                                                self.get_access_token,
+                                                                10)
+                    headers = self._set_headers(api_credentials, headers)
+                    # Recursive call.
+                    fail_counter += 1
+                    return self._call_api(url, headers, params, db, location_id, fail_counter)
+                else:
+                    print(res.text)
+                    raise EzyVetAPIError(f'Api returned non-200 status code. res: {res.status_code} '
+                                 f'res.text: {res.text}')
         data = res.json()
         return data
 
