@@ -20,6 +20,7 @@ class EzyVetApi:
         self._config = ConfigurationService(test_mode)
         # In test mode the self._db value will be set externally by the unit test.
         self._db = DBManager() if not test_mode else None
+        self.start_time = None
 
     '''
     # Section - Public Methods
@@ -138,6 +139,10 @@ class EzyVetApi:
                 params = {id_field: {'in': ids[x: x + 100]}}
             df_batch = self.get(location_id, endpoint_ver, endpoint_name, params, dataframe_flag=True)
             df = pd.concat([df, df_batch])
+
+        # Now that the batch is complete, reset the start time
+        self.start_time = None
+
         if dataframe_flag:
             return df
         else:
@@ -325,20 +330,21 @@ class EzyVetApi:
             # Get the next page of data. EzyVet will only return 10 records per page so a pagination call needs to be
             # made.
             minute_call_counter = 1
-            start_time = datetime.now()
+            self.start_time = datetime.now() if not self.start_time else self.start_time
             for page_num in range(2, pages + 1):
                 # Rate limits call for no more than 60 calls per minute to any one endpoint (you could
                 # call two endpoints at the same time up to 120 total calls a min). This throttles the
                 # call speed to stay under the limit.
 
                 if minute_call_counter >= calls_per_minute_limit:
-                    elapsed_seconds = (datetime.now() - start_time).seconds
+                    elapsed_seconds = (datetime.now() - self.start_time).seconds
                     time_remaining = elapsed_seconds - seconds_in_a_min
-                    print(f"Rate limit reached. It's been {elapsed_seconds} seconds. Sleeping for {time_remaining}s.")
-                    # Add 1 just to give a small amount of wiggle room.
-                    time.sleep(time_remaining + 1)
+                    if time_remaining > 0:
+                        print(f"Rate limit reached. It's been {elapsed_seconds} seconds. Sleeping for {time_remaining}s.")
+                        # Add 1 just to give a small amount of wiggle room.
+                        time.sleep(time_remaining + 1)
                     minute_call_counter = 0
-                    start_time = datetime.now()
+                    self.start_time = datetime.now()
                 # Add a "page" variable to the params
                 params['page'] = page_num
                 data = self._call_api(url, headers, params, db, location_id)
