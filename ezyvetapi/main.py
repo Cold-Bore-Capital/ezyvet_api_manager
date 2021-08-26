@@ -393,7 +393,6 @@ class EzyVetApi:
                 return self._call_api(url, headers, params, db, location_id, fail_counter)
             elif res.status_code == 429 and fail_counter <= 2:
                 sleep_time = self._config.server_retry_sleep_time
-                fail_counter += 1
                 print(f'Server replied with status code {res.status_code}. Retrying in {sleep_time} seconds. ')
                 time.sleep(sleep_time)
                 fail_counter += 1
