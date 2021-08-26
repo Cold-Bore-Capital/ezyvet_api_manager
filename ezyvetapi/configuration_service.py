@@ -20,6 +20,11 @@ class ConfigurationService:
 
     '''
     EzyVet API
+    
+    Env's:
+        EZY_VET_API=path_to_the_api 
+        SERVER_RETRY_SLEEP_TIME=how long to sleep during a retry. 
+        EZYVET_API_FAIL_COUNT=How many times to retry when getting a 429 failure. 
     '''
 
     @property
@@ -29,6 +34,10 @@ class ConfigurationService:
     @property
     def server_retry_sleep_time(self):
         return int(self._check_if_value_exists('SERVER_RETRY_SLEEP_TIME', None, False, default_value=30))
+
+    @property
+    def api_fail_count(self):
+        return int(self._check_if_value_exists('EZYVET_API_FAIL_COUNT', None, False, default_value=5))
 
     '''
     # End Properties

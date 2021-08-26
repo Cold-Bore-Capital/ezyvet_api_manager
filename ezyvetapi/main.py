@@ -379,7 +379,7 @@ class EzyVetApi:
         """
         res = requests.get(url, headers=headers, params=params)
         if res.status_code != 200:
-            if res.status_code != 401 and fail_counter <= 2:
+            if res.status_code != 401 and fail_counter <= self._config.api_fail_count:
                 # Something is wrong with the token. Get a new one.
                 print('Token expired or otherwise was invalid. Pulling new token. ')
                 api_credentials = self._get_api_credentials(location_id,
@@ -391,7 +391,7 @@ class EzyVetApi:
                 # Recursive call.
                 fail_counter += 1
                 return self._call_api(url, headers, params, db, location_id, fail_counter)
-            elif res.status_code == 429 and fail_counter <= 2:
+            elif res.status_code == 429 and fail_counter <= self._config.api_fail_count:
                 sleep_time = self._config.server_retry_sleep_time
                 print(f'Server replied with status code {res.status_code}. Retrying in {sleep_time} seconds. ')
                 time.sleep(sleep_time)
