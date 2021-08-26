@@ -159,6 +159,9 @@ class TestEzyVetApi(TestCase):
         golden = 'header_value'
         self.assertEqual(golden, test)
 
+    def test__call_api(self):
+        pass
+
     def test__get_data_from_api(self):
         e = MockEzyVetAPI_test_get_data_from_api()
         api_url = 'https://testme.test'
