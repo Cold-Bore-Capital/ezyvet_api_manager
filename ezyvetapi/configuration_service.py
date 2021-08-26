@@ -28,7 +28,7 @@ class ConfigurationService:
 
     @property
     def server_retry_sleep_time(self):
-        return self._check_if_value_exists('SERVER_RETRY_SLEEP_TIME', None, False, default_value=30)
+        return int(self._check_if_value_exists('SERVER_RETRY_SLEEP_TIME', None, False, default_value=30))
 
     '''
     # End Properties
