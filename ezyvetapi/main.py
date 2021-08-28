@@ -21,9 +21,9 @@ class EzyVetApi:
         # In test mode the self._db value will be set externally by the unit test.
         self._db = DBManager() if not test_mode else None
         self.start_time = None
-        self.access_token_cache = None
+        self._access_token_cache = None
         # Start out with a now expire time
-        self.access_token_cache_expire = datetime.now()
+        self._access_token_cache_expire = datetime.now()
 
     '''
     # Section - Public Methods
@@ -53,11 +53,13 @@ class EzyVetApi:
         endpoint = f'{endpoint_ver}/{endpoint_name}'
         db = self._db
         params = self._build_params(params)
-        api_credentials = None
-        if not self.access_token_cache or self.access_token_cache_expire <= datetime.now():
+        if not self._access_token_cache or self._access_token_cache_expire <= datetime.now():
             api_credentials = self._get_api_credentials(location_id, self._config.ezy_vet_api, db,
                                                         self.get_access_token, 10)
-            self.access_token_cache_expire = datetime.now() + timedelta(minutes=10)
+            self._access_token_cache_expire = datetime.now() + timedelta(minutes=10)
+            self._access_token_cache = api_credentials
+        else:
+            api_credentials = self._access_token_cache
         headers = self._set_headers(api_credentials, headers)
         api_url = self._config.ezy_vet_api
         output = self._get_data_from_api(api_url=api_url,
