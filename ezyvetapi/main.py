@@ -392,9 +392,10 @@ class EzyVetApi:
                 # Recursive call.
                 fail_counter += 1
                 return self._call_api(url, headers, params, db, location_id, fail_counter)
-            elif res.status_code == 429 and fail_counter <= self._config.api_fail_count:
+            elif fail_counter <= self._config.api_fail_count:
                 sleep_time = self._config.server_retry_sleep_time
-                print(f'API returned 429 status code. Retrying in {sleep_time} seconds. This is attempt {fail_counter}')
+                print(f'API returned {res.status_code} status code. Retrying in {sleep_time} seconds. \n'
+                      f'This is attempt {fail_counter}. Message: \{res.text}')
                 time.sleep(sleep_time)
                 fail_counter += 1
                 # Recursive call.
