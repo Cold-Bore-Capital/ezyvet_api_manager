@@ -379,9 +379,10 @@ class EzyVetApi:
         """
         res = requests.get(url, headers=headers, params=params)
         if res.status_code != 200:
-            if res.status_code != 401 and fail_counter <= self._config.api_fail_count:
+            # Code 401 is unauthorized client.
+            if res.status_code == 401 and fail_counter <= self._config.api_fail_count:
                 # Something is wrong with the token. Get a new one.
-                print('Token expired or otherwise was invalid. Pulling new token. ')
+                print(f'Token expired or otherwise was invalid. Pulling new token. This is attempt {fail_counter}')
                 api_credentials = self._get_api_credentials(location_id,
                                                             self._config.ezy_vet_api,
                                                             db,
@@ -393,14 +394,14 @@ class EzyVetApi:
                 return self._call_api(url, headers, params, db, location_id, fail_counter)
             elif res.status_code == 429 and fail_counter <= self._config.api_fail_count:
                 sleep_time = self._config.server_retry_sleep_time
-                print(f'Server replied with status code {res.status_code}. Retrying in {sleep_time} seconds. ')
+                print(f'API returned 429 status code. Retrying in {sleep_time} seconds. This is attempt {fail_counter}')
                 time.sleep(sleep_time)
                 fail_counter += 1
                 # Recursive call.
                 return self._call_api(url, headers, params, db, location_id, fail_counter)
             else:
                 print(res.text)
-                raise EzyVetAPIError(f'Api returned non-200 status code. res: {res.status_code} '
+                raise EzyVetAPIError(f'API returned a non-200 status code. res: {res.status_code} \n'
                                      f'res.text: {res.text}')
 
         data = res.json()
