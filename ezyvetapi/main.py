@@ -21,6 +21,9 @@ class EzyVetApi:
         # In test mode the self._db value will be set externally by the unit test.
         self._db = DBManager() if not test_mode else None
         self.start_time = None
+        self.access_token_cache = None
+        # Start out with a now expire time
+        self.access_token_cache_expire = datetime.now()
 
     '''
     # Section - Public Methods
@@ -50,8 +53,11 @@ class EzyVetApi:
         endpoint = f'{endpoint_ver}/{endpoint_name}'
         db = self._db
         params = self._build_params(params)
-        api_credentials = self._get_api_credentials(location_id, self._config.ezy_vet_api, db, self.get_access_token,
-                                                    10)
+        api_credentials = None
+        if not self.access_token_cache or self.access_token_cache_expire <= datetime.now():
+            api_credentials = self._get_api_credentials(location_id, self._config.ezy_vet_api, db,
+                                                        self.get_access_token, 10)
+            self.access_token_cache_expire = datetime.now() + timedelta(minutes=10)
         headers = self._set_headers(api_credentials, headers)
         api_url = self._config.ezy_vet_api
         output = self._get_data_from_api(api_url=api_url,
@@ -340,7 +346,8 @@ class EzyVetApi:
                     elapsed_seconds = (datetime.now() - self.start_time).seconds
                     time_remaining = elapsed_seconds - seconds_in_a_min
                     if time_remaining > 0:
-                        print(f"Rate limit reached. It's been {elapsed_seconds} seconds. Sleeping for {time_remaining}s.")
+                        print(
+                            f"Rate limit reached. It's been {elapsed_seconds} seconds. Sleeping for {time_remaining}s.")
                         # Add 1 just to give a small amount of wiggle room.
                         time.sleep(time_remaining + 1)
                     minute_call_counter = 0
