@@ -249,13 +249,13 @@ class TestEzyVetApi(TestCase):
             {'id': 3, 'name': 'Start date set, 10 days', 'start_date': datetime(2021, 1, 1, 5, 43, 12),
              'end_date': None, 'days': 10, 'golden': {'test': {'gt': 1609504992.0, 'lte': 1610368992.0}}},
 
-            {'id': 4, 'name': 'End date set, no start', 'start_date': None,
+            {'id': 4, 'name': 'End date set, no get_appointments', 'start_date': None,
              'end_date': datetime(2021, 1, 10, 5, 43, 12), 'days': 0, 'golden': {'test': {'lt': 1610282592.0}}},
 
             {'id': 5, 'name': 'End date set, 10 days', 'start_date': None,
              'end_date': datetime(2021, 1, 10, 5, 43, 12), 'days': 10,
              'golden': {'test': {'gt': 1609418592.0, 'lte': 1610282592.0}}},
-            {'id': 6, 'name': 'End date with no time, no start', 'start_date': None,
+            {'id': 6, 'name': 'End date with no time, no get_appointments', 'start_date': None,
              'end_date': datetime(2021, 1, 10), 'days': 0, 'golden': {'test': {'lt': 1610348399.0}}},
         ]
         for t in tests:
@@ -278,7 +278,7 @@ class TestEzyVetApi(TestCase):
                                         end_date=end_date,
                                         days=days)
 
-        # Test Error Conditions. No start or end date set
+        # Test Error Conditions. No get_appointments or end date set
         start_date = None
         end_date = None
         days = 10
