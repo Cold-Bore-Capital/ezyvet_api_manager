@@ -16,7 +16,7 @@ class EzyVetShelterAnimalBooking(Model):
         super().__init__(location_id, db)
 
     def start(self, start_date: datetime = None, end_date: datetime = None) -> pd.DataFrame:
-	    """
+        """
         Controller Method for EzyVet Shelter Animal Bookings.
 
         Note, this model saves to the appointments table, joining the two types of data together.
