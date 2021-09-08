@@ -32,7 +32,7 @@ class Appointments(Model):
             7: [18, 42, 43, 46, 56, 59, 60, 62, 65, 67, 68, 70, 72, 74, 76, 78],
             8: [18, 43, 47, 54, 55, 56, 57, 58, 59, 60, 61, 62, 63, 65, 66, 67]}
 
-    def get_appointments(self, start_date: datetime = None, end_date: datetime = None, ids: List[int] = None) -> None:
+    def get_appointments(self, start_date: datetime = None, end_date: datetime = None, ids: List[int] = None) -> pd.DataFrame:
         """
         Controller method for EzyVet appointments.
 
@@ -42,7 +42,7 @@ class Appointments(Model):
             ids: TO BE IMPLEMENTED
 
         Returns:
-            None
+            A dataframe containing appointments.
         """
         print('Starting appointments load')
         db = self.db
@@ -64,13 +64,14 @@ class Appointments(Model):
             appointments_df = self._set_data_types(appointments_df)
             self._create_is_medical_column(appointments_df, self._is_medical)
             self._create_datetime_column(appointments_df)
-            self._remove_existing_appointments(self.location_id, appointments_df)
             appointments_df = self._remove_columns(appointments_df)
             self._truncate_description_col(appointments_df)
             # Set the flag to identify this is a med or grooming appt.
             appointments_df['is_shelter_animal_booking'] = False
-            self._save_appointments(appointments_df, db)
-            self._first_appointment_flag(db, appointments_df['ezyvet_id'].tolist())
+            return appointments_df
+            # self._remove_existing_appointments(self.location_id, appointments_df)
+            # self._save_appointments(appointments_df, db)
+            # self._first_appointment_flag(db, appointments_df['ezyvet_id'].tolist())
 
     @staticmethod
     def _get_new_appointments_df(location_id: int, params: dict, get_endpoint_df: callable) -> pd.DataFrame:
@@ -92,20 +93,6 @@ class Appointments(Model):
             params = {'active': True}
         appointments_df = get_endpoint_df(location_id, 'v2', 'appointment', params)
         return appointments_df
-
-    @staticmethod
-    def _save_appointments(appointments_df: pd.DataFrame, db: DBManager) -> None:
-        """
-        Saves appointment to the database.
-        Args:
-            appointments_df: Dataframe containing appointments, with columns matching database table.
-            db: An instance of DBManager
-
-        Returns:
-            None
-        """
-        sql, params = db.build_sql_from_dataframe(appointments_df, 'appointments', 'gclick')
-        db.execute_many(sql, params)
 
     @staticmethod
     def _truncate_description_col(appointments_df: pd.DataFrame) -> None:
@@ -218,46 +205,7 @@ class Appointments(Model):
 
         return appointments_df
 
-    @staticmethod
-    def _remove_existing_appointments(location_id, appointments_df):
-        db = DBManager()
-        params = appointments_df['ezyvet_id'].to_list()
-        sql = f'DELETE FROM gclick.appointments WHERE ezyvet_id IN ({",".join([str(x) for x in params])}) AND gclick.appointments.location_id = {location_id}'
-        db.execute_simple(sql)
 
-    @staticmethod
-    def _first_appointment_flag(db: DBManager, ezyvet_id_list: List[int]):
-        start = 0
-        chunk_size = 50
-        id_list_len = len(ezyvet_id_list)
-        for x in range(chunk_size, id_list_len, chunk_size):
-            chunk = ezyvet_id_list[start:x]
-            id_string = ",".join([str(x) for x in chunk])
-            sql = f'''update gclick.appointments
-                        set first_appt =
-                           case
-                            when a.datetime_start_at = fd.first_appt then 1
-                            when a.type_id = 'Exam - New Patient (Adult)' then 1 
-                            when a.type_id = 'Exam - New Puppy/Kitten' then 1
-                            else 0
-                           end
-                    from gclick.appointments a
-                    inner join (
-                        select animal_id,
-                               division_id,
-                               min(datetime_start_at) as first_appt
-                        from gclick.appointments
-                        where animal_id is not null
-                        and ezyvet_id in ({id_string})
-                        group by
-                            animal_id,
-                            division_id
-                    ) fd on fd.animal_id = a.animal_id and fd.division_id = a.division_id
-                    where a.animal_id is not null
-                    and a.ezyvet_id in ({id_string})'''
-
-            db.execute_simple(sql)
-            start = x
 
 
 if __name__ == "__main__":

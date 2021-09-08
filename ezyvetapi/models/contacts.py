@@ -13,13 +13,16 @@ class Contacts(Model):
     def __init__(self, location_id, db=None):
         super().__init__(location_id, db)
 
-    def start(self, start_date: datetime = None, end_date: datetime = None):
+    def start(self, start_date: datetime = None, end_date: datetime = None) -> pd.DataFrame:
         """
-               Cleans/Uploads any new/modified animals from Ezy Vet API
+        Add desc
+        Args:
+            start_date:
+            end_date:
 
-               Returns: Dataframe that is uploaded to Redshift
+        Returns:
 
-         """
+        """
         print('Starting contacts load')
         ezy = EzyVetApi()
         end_date, start_date = self._set_date_range(end_date, start_date)
@@ -48,9 +51,7 @@ class Contacts(Model):
         contacts_df = contacts_df.apply(self._apply_contact_details, axis=1, args=(contacts_detail_df,))
         self._create_datetime_column(contacts_df)
         contacts_df = self._remove_unused_columns(contacts_df)
-        self._remove_existing_contacts(self.db)
-        sql, params = self.db.build_sql_from_dataframe(contacts_df, 'contacts', 'gclick')
-        self.db.execute_many(sql, params)
+        return contacts_df
 
     def _set_date_range(self, end_date, start_date):
         """
