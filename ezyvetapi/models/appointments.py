@@ -62,7 +62,7 @@ class Appointments(Model):
 
             self._assign_division_location_id(appointments_df, self.location_id)
             appointments_df = self._set_data_types(appointments_df)
-            self._create_is_medical_column(appointments_df, self._is_medical)
+            self._create_is_medical_column(self.location_id, appointments_df, self._is_medical)
             self._create_datetime_column(appointments_df)
             appointments_df = self._remove_columns(appointments_df)
             self._truncate_description_col(appointments_df)
@@ -148,8 +148,8 @@ class Appointments(Model):
         Removes block out type bookings.
 
         Args:
-            location_id:
-            appointments_df:
+            location_id: Location ID to process.
+            appointments_df: Dataframe containing appointments
             filtered_types: A dict containing appointment type ID's to remove.
 
         Returns:
@@ -161,7 +161,18 @@ class Appointments(Model):
         appointments_df.reset_index(drop=True, inplace=True)
 
     @staticmethod
-    def _add_resource_data(location_id, appointments_df, ezy: EzyVetApi):
+    def _add_resource_data(location_id: int, appointments_df: pd.DataFrame, ezy: EzyVetApi) -> None:
+        """
+        Converts resource ID values to names.
+
+        Args:
+            location_id: The location ID to process
+            appointments_df: Dataframe containing appointments
+            ezy: An instance of the EzyVet API Main class.
+
+        Returns:
+            None, Pass by ref.
+        """
         resource_df = ezy.get(location_id, 'v1', 'resource', dataframe_flag=True)
         # resource_df = resource_df[['id', 'ownership_id', 'name']].copy()
         # resources = resource_df.to_list()
@@ -174,32 +185,68 @@ class Appointments(Model):
             lambda x: resource_df.loc[x, 'name'])
 
     @staticmethod
-    def _set_primary_resource_id(appointments_df):
+    def _set_primary_resource_id(appointments_df: pd.DataFrame) -> None:
+        """
+        Picks the first resource ID and sets as the resource_id.
+
+        The returned dataframe contains a nested list of dictionaries in this format:
+        "resources": [{"id": 305},
+                      {"id": 1797}]
+
+        This method takes the first resource ID in the list (305 in this example) and sets that as the 'resource_id'
+        field.
+
+        Args:
+            appointments_df: Dataframe containing appointments
+
+        Returns:
+            None. Pass by ref.
+        """
         mask = ~pd.isna(appointments_df['resources'])
         appointments_df.loc[mask, 'resource_id'] = appointments_df.loc[mask, 'resources'].apply(lambda x: x[0]['id'])
 
     @staticmethod
-    def _translate_id_fields(location_id, appointments_df, ezy: EzyVetApi):
+    def _translate_id_fields(location_id: int, appointments_df: pd.DataFrame, ezy: EzyVetApi) -> None:
+        """
+        Translates the Appointment Type and Appointment Status fields from a number to a text value.
+
+        Args:
+            location_id: The location ID to process
+            appointments_df: Dataframe containing appointments
+            ezy: An instance of the EzyVet API Main class.
+
+        Returns:
+            None, Pass by ref.
+        """
         appointments_df['first_appt'] = np.nan
         appointments_df['appt_type_id'] = appointments_df['type_id']
         appointments_df['type_id'].replace(ezy.get_translation(location_id, 'v1', 'appointmenttype'), inplace=True)
         appointments_df['status_id'].replace(ezy.get_translation(location_id, 'v1', 'appointmentstatus'), inplace=True)
 
-
-    # For some reason there is an event_group column in one of the pwa appointments_df and not in all of the others
-    # This function will drop the column if it appears in one of the df's
     @staticmethod
-    def _drop_event_groups(appointments_df):
+    def _create_is_medical_column(location_id: int, appointments_df: pd.DataFrame, is_medical: dict) -> pd.DataFrame:
+        """
+        Creates a column flagging if the appointment is medical.
 
-        if 'event_group' in appointments_df.columns:
-            appointments_df = appointments_df.drop(columns=['event_group'])
-            return appointments_df
+        This method uses a dictionary of appointment type lookups to flag if an appointment is medical. The lookup dict
+        is structured like this:
 
-        return appointments_df
+        {2: [18, 26, 27, 28, 31, 32, 33, 34, 35, 37, 39, 40, 41, 56, 59, 60],
+         3: [18, 23, 28, 29, 30, 32, 33, 34, 35, 36, 37, 38, 40, 59, 60, 61]}
 
-    def _create_is_medical_column(self, appointments_df, is_medical):
+        In this example, 2 is the location ID, and the list contains the appointment type ID's that would be flagged as
+        medical.
+
+        Args:
+            location_id: The location ID to process
+            appointments_df: Dataframe containing appointments
+            is_medical: A dictionary containing the location ID and list of appointment type IDs.
+
+        Returns:
+            The appointments dataframe.
+        """
         appointments_df['is_medical'] = 0
-        mask = (appointments_df['appt_type_id'].isin(is_medical[self.location_id])) & (
+        mask = (appointments_df['appt_type_id'].isin(is_medical[location_id])) & (
                 appointments_df['is_medical'] == 0)
         appointments_df.loc[mask, 'is_medical'] = 1
 

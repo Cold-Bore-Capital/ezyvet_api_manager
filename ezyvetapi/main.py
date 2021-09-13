@@ -202,7 +202,6 @@ class EzyVetApi:
             Returns a dictionary in the format {1:'translation_name'}
         """
         df = self.get(location_id, endpoint_ver, endpoint_name, dataframe_flag=True)
-        # df.to_dict(orient='split')
         translation = {int(x['id']): x['name'] for x in df.to_dict(orient='records')}
         return translation
 
