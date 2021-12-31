@@ -1,16 +1,9 @@
-from ezyvetapi.main import EzyVetApi
-
-<<<<<<< HEAD
-
-=======
->>>>>>> origin/orm_build
 from datetime import datetime
-from typing import Dict, List
+from typing import List
 
-import numpy as np
 import pandas as pd
-from cbcdb import DBManager
 
+from ezyvetapi.main import EzyVetApi
 from ezyvetapi.models.model import Model
 
 
@@ -29,13 +22,10 @@ class Resources(Model):
             start_date, end_date = self.get_most_recent('resources', 'modified_at')
         params = {'active': True}
         resource_df = ezy.get_date_range(self.location_id, 'v1', 'resource', 'modified_at', params=params,
-                                             start_date=start_date, end_date=end_date, dataframe_flag=True)
+                                         start_date=start_date, end_date=end_date, dataframe_flag=True)
 
         if isinstance(resource_df, pd.DataFrame):
-            return  resource_df
-
-
-
+            return resource_df
 
 
 if __name__ == "__main__":
