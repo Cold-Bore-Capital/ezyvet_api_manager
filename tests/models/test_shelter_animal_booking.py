@@ -2,14 +2,14 @@ from unittest import TestCase
 
 import pandas as pd
 
-from ezyvetapi.models.shelter_animal_bookings import EzyVetShelterAnimalBooking
+from ezyvetapi.models.shelter_animal_bookings import ShelterAnimalBooking
 
 
 class TestEzyVetShelterAnimalBooking(TestCase):
 
     def test__rename_fields(self):
         db = MockDBManager()
-        e = EzyVetShelterAnimalBooking(1, db)
+        e = ShelterAnimalBooking(1, db)
         df = pd.DataFrame(columns=['shelter_resource_ownership_id', 'start_time', 'id', 'shelter_resource_name',
                                    'status', 'comment'])
         e._rename_fields(df)
@@ -22,7 +22,7 @@ class TestEzyVetShelterAnimalBooking(TestCase):
 
     def test__create_duration_column(self):
         db = MockDBManager()
-        e = EzyVetShelterAnimalBooking(1, db)
+        e = ShelterAnimalBooking(1, db)
         df = pd.DataFrame({'start_at': [1628053200, 1627362000, 1627534800],
                            'end_time': [1628139599, 1627923599, 1627837199]})
         e._create_duration_column(df)

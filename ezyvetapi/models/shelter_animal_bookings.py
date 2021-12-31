@@ -10,7 +10,7 @@ from numpy.distutils.system_info import p
 from ezyvetapi.models.model import Model
 
 
-class EzyVetShelterAnimalBooking(Model):
+class ShelterAnimalBooking(Model):
 
     def __init__(self, location_id, db=None):
         super().__init__(location_id, db)
@@ -110,5 +110,5 @@ class EzyVetShelterAnimalBooking(Model):
 
 
 if __name__ == '__main__':
-    e = EzyVetShelterAnimalBooking(3)
+    e = ShelterAnimalBooking(3)
     e.start(datetime(2020, 1, 1), datetime(2020, 5, 1))
