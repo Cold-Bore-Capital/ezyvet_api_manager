@@ -96,7 +96,7 @@ class EzyVetApi:
             start_date: Optional. Start of date range.
             end_date: Optional. End of date range
             params: Optional parameters to include in filter.
-            days: Optional. A number of days to set the start or end date of the range.
+            days: Optional. A number of days to set the get_appointments or end date of the range.
             dataframe_flag: When set to true, method will return results in a Pandas DataFrame format.
 
         Returns:
@@ -148,7 +148,7 @@ class EzyVetApi:
             df_batch = self.get(location_id, endpoint_ver, endpoint_name, params, dataframe_flag=True)
             df = pd.concat([df, df_batch])
 
-        # Now that the batch is complete, reset the start time
+        # Now that the batch is complete, reset the get_appointments time
         self.start_time = None
 
         if dataframe_flag:
@@ -202,7 +202,6 @@ class EzyVetApi:
             Returns a dictionary in the format {1:'translation_name'}
         """
         df = self.get(location_id, endpoint_ver, endpoint_name, dataframe_flag=True)
-        # df.to_dict(orient='split')
         translation = {int(x['id']): x['name'] for x in df.to_dict(orient='records')}
         return translation
 
@@ -429,24 +428,24 @@ class EzyVetApi:
         a. start_date and end_date set: If both a start_date and end_date are provided, the method will create a between
         filter.
 
-        b. start_date, end_date = None: A filter will be created for any value greater than the start date.
+        b. start_date, end_date = None: A filter will be created for any value greater than the get_appointments date.
 
         c. start_date = None, end_date set: A filter will be created for any value less than the end date.
 
-        d. If either a start date, or an end date are set plus days, a date range will be created. For example, if
-           start_date is set with 5 days, a date range spanning the start date to five days in the future will be
+        d. If either a get_appointments date, or an end date are set plus days, a date range will be created. For example, if
+           start_date is set with 5 days, a date range spanning the get_appointments date to five days in the future will be
            created.
 
         Args:
             filter_field: Name of the field to filter on. I.E. "modified_date"
             start_date: Optional. Start of date range.
             end_date: Optional. End of date range
-            days: Optional. A number of days to set the start or end date of the range.
+            days: Optional. A number of days to set the get_appointments or end date of the range.
 
         Returns:
             A dictionary containing the appropriate date range.
         """
-        # Check to make sure that at least a start or end date exists.
+        # Check to make sure that at least a get_appointments or end date exists.
         output = {filter_field: None}
         if end_date:
             # For end date to be inclusive, it must have a time at the end of the day.
@@ -473,13 +472,13 @@ class EzyVetApi:
                 return {filter_field: {'lt': end_timestamp}}
         elif start_date and end_date:
             if days:
-                raise StartEndAndDaysSet('You cannot set the start date, end date, and days.')
+                raise StartEndAndDaysSet('You cannot set the get_appointments date, end date, and days.')
             else:
                 start_timestamp = time.mktime(start_date.timetuple())
                 end_timestamp = time.mktime(end_date.timetuple())
                 return {filter_field: {'gt': start_timestamp, 'lte': end_timestamp}}
         else:
-            raise MissingStartAndEndDate("You must set either a start or end date for build_date_filter.")
+            raise MissingStartAndEndDate("You must set either a get_appointments or end date for build_date_filter.")
 
 
 class MissingStartAndEndDate(Exception):
