@@ -16,8 +16,9 @@ class EzyVetApi:
     Queries the EzyVet API.
     """
 
-    def __init__(self, test_mode=False):
+    def __init__(self, test_mode:bool=False, debug_mode: bool=False):
         self._config = ConfigurationService(test_mode)
+        self._debug_mode = debug_mode
         # In test mode the self._db value will be set externally by the unit test.
         self._db = DBManager() if not test_mode else None
         self.start_time = None
@@ -54,13 +55,21 @@ class EzyVetApi:
         db = self._db
         params = self._build_params(params)
         if not self._access_token_cache or self._access_token_cache_expire <= datetime.now():
+            if self._debug_mode:
+                print('No valid cached API credentials. Getting new credentials from API.')
             api_credentials = self._get_api_credentials(location_id, self._config.ezy_vet_api, db,
                                                         self.get_access_token, 10)
             self._access_token_cache_expire = datetime.now() + timedelta(minutes=10)
             self._access_token_cache = api_credentials
+            if self._debug_mode:
+                print(f'Got API credentials. A token starting with {api_credentials["access_token"][:10]}')
         else:
             api_credentials = self._access_token_cache
+            if self._debug_mode:
+                print(f'Got API credentials from cache. A token starting with {api_credentials["access_token"][:10]}')
         headers = self._set_headers(api_credentials, headers)
+        if self._debug_mode:
+            print(f"Auth token in headers set to {headers['Authorization']}")
         api_url = self._config.ezy_vet_api
         output = self._get_data_from_api(api_url=api_url,
                                          params=params,
