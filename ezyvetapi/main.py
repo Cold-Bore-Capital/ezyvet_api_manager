@@ -3,6 +3,7 @@ import time
 from datetime import datetime
 from datetime import timedelta
 from typing import Dict, Any, Union, Callable, List
+import pytz
 
 import pandas as pd
 import requests
@@ -463,28 +464,34 @@ class EzyVetApi:
             if time_test == 0:
                 end_date = datetime(end_date.year, end_date.month, end_date.day, 23, 59, 59)
 
+        # Important note! If the date is timezone unaware, the timestamp conversion will convert what is a UTC time into
+        # the local timezone. This will yield very bad results including missed data.
         if start_date and not end_date:
-            start_timestamp = time.mktime(start_date.timetuple())
+            start_date = start_date.replace(tzinfo=pytz.utc)
+            start_timestamp = datetime.timestamp(start_date)
             if days:
                 end_date = start_date + timedelta(days=days)
-                end_timestamp = time.mktime(end_date.timetuple())
+                end_timestamp = datetime.timestamp(end_date)
                 return {filter_field: {'gt': start_timestamp, 'lte': end_timestamp}}
             else:
                 return {filter_field: {'gt': start_timestamp}}
         elif end_date and not start_date:
-            end_timestamp = time.mktime(end_date.timetuple())
+            end_date = end_date.replace(tzinfo=pytz.utc)
+            end_timestamp = datetime.timestamp(end_date)
             if days:
                 start_date = end_date - timedelta(days=days)
-                start_timestamp = time.mktime(start_date.timetuple())
+                start_timestamp = datetime.timestamp(start_date)
                 return {filter_field: {'gt': start_timestamp, 'lte': end_timestamp}}
             else:
                 return {filter_field: {'lt': end_timestamp}}
         elif start_date and end_date:
+            start_date = start_date.replace(tzinfo=pytz.utc)
+            end_date = end_date.replace(tzinfo=pytz.utc)
             if days:
                 raise StartEndAndDaysSet('You cannot set the get_appointments date, end date, and days.')
             else:
-                start_timestamp = time.mktime(start_date.timetuple())
-                end_timestamp = time.mktime(end_date.timetuple())
+                start_timestamp = datetime.timestamp(start_date)
+                end_timestamp = datetime.timestamp(end_date)
                 return {filter_field: {'gt': start_timestamp, 'lte': end_timestamp}}
         else:
             raise MissingStartAndEndDate("You must set either a get_appointments or end date for build_date_filter.")
