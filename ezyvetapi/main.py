@@ -400,7 +400,9 @@ class EzyVetApi:
             # Code 401 is unauthorized client.
             if res.status_code == 401 and fail_counter <= self._config.api_fail_count:
                 # Something is wrong with the token. Get a new one.
-                print(f'Token expired or otherwise was invalid. Pulling new token. This is attempt {fail_counter}')
+                print(f'Token expired or otherwise was invalid. Pulling new token. This is attempt {fail_counter} \n'
+                      f'The attempted headers were:\n{headers}\nParams:\n{params}'
+                      f'Message: \n{res.text}')
                 api_credentials = self._get_api_credentials(location_id,
                                                             self._config.ezy_vet_api,
                                                             db,
