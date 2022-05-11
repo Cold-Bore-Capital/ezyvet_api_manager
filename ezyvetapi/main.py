@@ -247,7 +247,8 @@ class EzyVetApi:
                              api_url: str,
                              db: DBManager,
                              get_access_token: Callable[[str, dict], str],
-                             cache_limit: int = 10) -> Dict[str, Any]:
+                             cache_limit: int = 10,
+                             hard_reset: bool = False) -> Dict[str, Any]:
         """
         Retrieves the API credentials for a location.
 
@@ -272,7 +273,7 @@ class EzyVetApi:
         system_time = credentials['system_time'].replace(tzinfo=None)
         # Check if access_token is older than cache limit.
         expire_date = system_time - timedelta(minutes=cache_limit)
-        if not credentials['access_token'] or expire_date > credentials['access_token_create_time']:
+        if not credentials['access_token'] or expire_date > credentials['access_token_create_time'] or hard_reset:
             credentials['access_token'] = get_access_token(api_url, credentials)
             sql = f'update {schema}.ezy_vet_credentials set access_token=%s, access_token_create_time=%s where location_id = %s'
             params = [credentials['access_token'], system_time, location_id]
@@ -407,7 +408,8 @@ class EzyVetApi:
                                                             self._config.ezy_vet_api,
                                                             db,
                                                             self.get_access_token,
-                                                            10)
+                                                            10,
+                                                            hard_reset=True)
                 headers = self._set_headers(api_credentials, headers)
                 # Recursive call.
                 fail_counter += 1
