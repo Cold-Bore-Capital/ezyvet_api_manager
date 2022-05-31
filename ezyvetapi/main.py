@@ -21,7 +21,7 @@ class EzyVetApi:
         self._config = ConfigurationService(test_mode)
         self._debug_mode = debug_mode
         # In test mode the self._db value will be set externally by the unit test.
-        self._db = DBManager() if not test_mode else None
+        self._db = DBManager(use_aws_secrets=False) if not test_mode else None
         self.start_time = None
         self._access_token_cache = None
         # Start out with a now expire time
